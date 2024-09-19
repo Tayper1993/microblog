@@ -1,0 +1,13 @@
+FLASK_APP=microblog.py
+FLASK_DEBUG=0
+
+# Local
+MAIL_SERVER=localhost
+MAIL_PORT=8025
+
+# Prod
+MAIL_SERVER=smtp.yandex.ru
+MAIL_PORT=587
+MAIL_USE_TLS=1
+MAIL_USERNAME=<your_email>
+MAIL_PASSWORD=<password>
