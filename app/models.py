@@ -1,5 +1,3 @@
-from hmac import digest
-
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from datetime import datetime, timezone
@@ -9,15 +7,42 @@ import sqlalchemy.orm as so
 from app import db, login
 from hashlib import md5
 
+"""
+    followers - это составная таблица которая в себе содержит только два внешних ключа.
+    В этой таблице ни один из внешних ключей не будет уникальным. Пара внешних ключей 
+    в совокупности будет уникальной. По этой причине оба столбца, помечены как первичные 
+    ключи. Так выглядит составной первичный ключ.
+"""
+
+followers = sa.Table(
+    'followers',
+    db.metadata,
+    sa.Column('follower_id', sa.Integer, sa.ForeignKey('user.id'),
+              primary_key=True),
+    sa.Column('followed_id', sa.Integer, sa.ForeignKey('user.id'),
+              primary_key=True),
+)
+
 
 class User(UserMixin, db.Model):
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     username: so.Mapped[str] = so.mapped_column(sa.String(64), index=True, unique=True)
     email: so.Mapped[str] = so.mapped_column(sa.String(120), index=True, unique=True)
     password_hash: so.Mapped[Optional[str]] = so.mapped_column(sa.String(256))
-    posts: so.WriteOnlyMapped['Post'] = so.relationship(back_populates='author')
     about_me: so.Mapped[Optional[str]] = so.mapped_column(sa.String(140))
     last_seen: so.Mapped[Optional[datetime]] = so.mapped_column(default=lambda: datetime.now(timezone.utc))
+
+    posts: so.WriteOnlyMapped['Post'] = so.relationship(back_populates='author')
+    following: so.WriteOnlyMapped['User'] = so.relationship(
+        secondary=followers, primaryjoin=(followers.c.follower_id == id),
+        secondaryjoin=(followers.c.followed_id == id),
+        back_populates='followers',
+    )
+    followers: so.WriteOnlyMapped['User'] = so.relationship(
+        secondary=followers, primaryjoin=(followers.c.followed_id == id),
+        secondaryjoin=(followers.c.follower_id == id),
+        back_populates='following',
+    )
 
     def __repr__(self) -> str:
         return f"<User {self.username}>"
